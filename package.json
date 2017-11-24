@@ -1,0 +1,23 @@
+{
+  "name": "@dlghq/dialog-profile-bot",
+  "version": "0.5.2",
+  "description": "Bot for voting",
+  "main": "src/index.js",
+  "author": "Nikita Gusakov <gusnkt@gmail.com>",
+  "license": "Apache-2.0",
+  "private": true,
+  "scripts": {
+    "start": "node src/index.js",
+    "postversion": "git push --follow-tags"
+  },
+  "dependencies": {
+    "@dlghq/dialog-api-utils": "0.1.2",
+    "@dlghq/dialog-node-client": "0.8.0",
+    "bluebird": "3.5.1",
+    "dotenv": "4.0.0",
+    "isomorphic-fetch": "2.2.1",
+    "node-fetch": "1.7.3",
+    "raven": "2.2.1",
+    "uuid": "3.1.0"
+  }
+}

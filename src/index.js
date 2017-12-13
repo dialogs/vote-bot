@@ -56,6 +56,8 @@ function createVoteActions(id) {
 async function run() {
   await Promise.delay(10000);
 
+  console.log('start');
+
   await bot.sendTextMessage(
     { type: 'user', id: config.bot.adminId },
     `
@@ -219,7 +221,7 @@ async function run() {
                   .map((gid) => messenger.getGroup(gid))
                   .filter((group) => group.type === 'group')
                   .filter((group) => group.canSendMessage !== false)
-                  .filter(group => group.members.findIndex((member => member.peerInfo.peer.id === message.sender.peer.id)) > 0)
+                  .filter(group => group.members.findIndex((member => member.peerInfo.peer.id === message.sender.peer.id)) >= 0)
                   .map(group => {
                     return {
                       label: group.name,

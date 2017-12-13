@@ -221,7 +221,10 @@ async function run() {
                   .map((gid) => messenger.getGroup(gid))
                   .filter((group) => group.type === 'group')
                   .filter((group) => group.canSendMessage !== false)
-                  .filter(group => group.members.findIndex((member => member.peerInfo.peer.id === message.sender.peer.id)) >= 0)
+                  .filter(group => {
+                    const index = group.members.findIndex((member => member.peerInfo.peer.id === message.sender.peer.id));
+                    return index >= 0
+                  })
                   .map(group => {
                     return {
                       label: group.name,

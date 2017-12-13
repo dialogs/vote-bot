@@ -1,6 +1,6 @@
 {
   "name": "@dlghq/dialog-profile-bot",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "description": "Bot for voting",
   "main": "src/index.js",
   "author": "Nikita Gusakov <gusnkt@gmail.com>",

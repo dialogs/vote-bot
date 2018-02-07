@@ -11,17 +11,18 @@ const config = require('./config');
 Raven.config(config.sentry.dsn).install();
 
 const bot = new Bot({
-  quiet: true,
+  quiet: false,
   endpoints: [config.bot.endpoint],
   username: config.bot.username,
   password: config.bot.password
 });
 
-function formatMessage(question, yes, no) {
+function formatMessage(question, yes, no, membersCount) {
   const all = yes + no;
 
   return `${question}
 
+*Зарегистрировано*: ${membersCount} человек
 *Проголосовало*: ${all}.
 
 *Да*: ${(all === 0 ? 0 : yes / all * 100).toFixed()}% (${yes}).
@@ -73,6 +74,8 @@ async function run() {
     groups = nextGroups;
   });
 
+  const messenger = await bot.ready;
+
   bot.onInteractiveEvent(async event => {
     const [id, action] = event.id.split(':');
     const survey = state.get(id);
@@ -100,6 +103,17 @@ async function run() {
         break;
 
       case 'select_group':
+        const groupId = parseInt(event.value, 10);
+        survey.group = groups
+          .filter((gid) => groupId)
+          .map((gid) => messenger.getGroup(gid))
+          .find((group) => group.type === 'group' && group.canSendMessage !== false);
+
+        if (!survey.group) {
+          await bot.editInteractiveMessage(event.peer, event.rid, 'Группа не найдена', []);
+          break;
+        }
+
         await bot.editInteractiveMessage(
           event.peer,
           event.rid,
@@ -138,53 +152,61 @@ async function run() {
         );
         await bot.sendInteractiveMessage(
           {
-            id: parseInt(event.value, 10),
+            id: groupId,
             type: 'group'
           },
-          formatMessage(survey.question, survey.yes.size, survey.no.size),
+          formatMessage(survey.question, survey.yes.size, survey.no.size, survey.group.members.length),
           createVoteActions(id)
         );
         break;
 
       case 'vote_no':
-        survey.no.add(event.uid);
-        survey.yes.delete(event.uid);
-        survey.message = { rid: event.rid, peer: event.peer };
-        await bot.editInteractiveMessage(
-          event.peer,
-          event.rid,
-          formatMessage(survey.question, survey.yes.size, survey.no.size),
-          createVoteActions(id)
-        );
+        if (survey.group) {
+          survey.no.add(event.uid);
+          survey.yes.delete(event.uid);
+          survey.message = { rid: event.rid, peer: event.peer };
+          await bot.editInteractiveMessage(
+            event.peer,
+            event.rid,
+            formatMessage(survey.question, survey.yes.size, survey.no.size, survey.group.members.length),
+            createVoteActions(id)
+          );
+        }
         break;
 
       case 'vote_yes':
-        survey.yes.add(event.uid);
-        survey.no.delete(event.uid);
-        survey.message = { rid: event.rid, peer: event.peer };
-        await bot.editInteractiveMessage(
-          event.peer,
-          event.rid,
-          formatMessage(survey.question, survey.yes.size, survey.no.size),
-          createVoteActions(id)
-        );
+        if (survey.group) {
+          survey.yes.add(event.uid);
+          survey.no.delete(event.uid);
+          survey.message = { rid: event.rid, peer: event.peer };
+          await bot.editInteractiveMessage(
+            event.peer,
+            event.rid,
+            formatMessage(survey.question, survey.yes.size, survey.no.size, survey.group.members.length),
+            createVoteActions(id)
+          );
+        }
         break;
 
       case 'stop':
-        await bot.editInteractiveMessage(
-          event.peer,
-          event.rid,
-          formatMessage(survey.question, survey.yes.size, survey.no.size),
-          []
-        );
-        if (survey.message) {
+        if (survey.group) {
           await bot.editInteractiveMessage(
-            survey.message.peer,
-            survey.message.rid,
-            formatMessage(survey.question, survey.yes.size, survey.no.size),
+            event.peer,
+            event.rid,
+            formatMessage(survey.question, survey.yes.size, survey.no.size, survey.group.members.length),
             []
           );
+
+          if (survey.message) {
+            await bot.editInteractiveMessage(
+              survey.message.peer,
+              survey.message.rid,
+              formatMessage(survey.question, survey.yes.size, survey.no.size, survey.group.members.length),
+              []
+            );
+          }
         }
+
         break;
     }
   });
@@ -251,12 +273,12 @@ async function run() {
 function onError(error) {
   Raven.captureException(error, (sendError) => {
     if (sendError) {
-      console.trace(error);
       console.error(sendError);
     }
-
-    process.exit(1);
   });
+
+  console.trace(error);
+  process.exit(1);
 }
 
 run().catch(onError);

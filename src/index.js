@@ -105,7 +105,7 @@ async function run() {
       case 'select_group':
         const groupId = parseInt(event.value, 10);
         survey.group = groups
-          .filter((gid) => groupId)
+          .filter((gid) => gid === groupId)
           .map((gid) => messenger.getGroup(gid))
           .find((group) => group.type === 'group' && group.canSendMessage !== false);
 
